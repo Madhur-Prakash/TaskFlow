@@ -75,7 +75,7 @@ Exchange a valid `refreshToken` cookie for a new token pair.
 
 ---
 
-### `POST /auth/logout` 🔒
+### `POST /auth/logout` (protected)
 Clear tokens server-side and client-side.
 
 **Response `200`**
@@ -85,7 +85,7 @@ Clear tokens server-side and client-side.
 
 ---
 
-### `GET /auth/me` 🔒
+### `GET /auth/me` (protected)
 Get the currently authenticated user.
 
 **Response `200`**
@@ -97,7 +97,7 @@ Get the currently authenticated user.
 
 ## Organization Endpoints
 
-All org endpoints require authentication 🔒.
+All org endpoints require authentication.
 
 ### `GET /orgs`
 Get all organizations the current user belongs to (as owner or member).
@@ -169,7 +169,7 @@ Update a member's org role.
 
 ## Task Endpoints
 
-All task endpoints require authentication 🔒.
+All task endpoints require authentication.
 
 ### `GET /orgs/:orgId/tasks` — Member only
 Get tasks for an organization.
@@ -221,10 +221,10 @@ Delete a task. Only the creator or an org admin can delete.
 
 ## User Endpoints
 
-### `GET /users` 🔒
+### `GET /users` (protected)
 Get all users. Used by the frontend for the "Add Member" dropdown.
 
-### `GET /users/admin` 🔒 — Global Admin only
+### `GET /users/admin` (protected) — Global Admin only
 Full user list, restricted to global admins.
 
 ---
