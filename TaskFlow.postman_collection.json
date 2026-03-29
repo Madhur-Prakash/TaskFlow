@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "TaskFlow API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:5000/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "orgId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "userId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST", "url": "{{base}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"Alice\",\"email\":\"alice@example.com\",\"password\":\"secret123\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('register ok', () => pm.response.to.have.status(201));", "const d = pm.response.json(); pm.collectionVariables.set('token', d.data.accessToken);"] } }]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST", "url": "{{base}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"alice@example.com\",\"password\":\"secret123\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["const d = pm.response.json(); pm.collectionVariables.set('token', d.data.accessToken);"] } }]
+        },
+        { "name": "Me", "request": { "method": "GET", "url": "{{base}}/auth/me", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } },
+        { "name": "Refresh Token", "request": { "method": "POST", "url": "{{base}}/auth/refresh" } },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{base}}/auth/logout", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "Create Org",
+          "request": {
+            "method": "POST", "url": "{{base}}/orgs",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"Acme Corp\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["const d = pm.response.json(); pm.collectionVariables.set('orgId', d.data._id);"] } }]
+        },
+        { "name": "Get My Orgs", "request": { "method": "GET", "url": "{{base}}/orgs", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } },
+        { "name": "Get Org", "request": { "method": "GET", "url": "{{base}}/orgs/{{orgId}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } },
+        {
+          "name": "Add Member",
+          "request": {
+            "method": "POST", "url": "{{base}}/orgs/{{orgId}}/members",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"userId\":\"{{userId}}\",\"role\":\"member\"}" }
+          }
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "method": "PATCH", "url": "{{base}}/orgs/{{orgId}}/members/{{userId}}/role",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"role\":\"admin\"}" }
+          }
+        },
+        { "name": "Remove Member", "request": { "method": "DELETE", "url": "{{base}}/orgs/{{orgId}}/members/{{userId}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } },
+        { "name": "Delete Org", "request": { "method": "DELETE", "url": "{{base}}/orgs/{{orgId}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        { "name": "Get Tasks", "request": { "method": "GET", "url": "{{base}}/orgs/{{orgId}}/tasks", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST", "url": "{{base}}/orgs/{{orgId}}/tasks",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"title\":\"Build login page\",\"description\":\"Implement JWT auth UI\",\"status\":\"todo\"}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["const d = pm.response.json(); pm.collectionVariables.set('taskId', d.data._id);"] } }]
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PATCH", "url": "{{base}}/tasks/{{taskId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"status\":\"in-progress\",\"title\":\"Updated title\"}" }
+          }
+        },
+        { "name": "Delete Task", "request": { "method": "DELETE", "url": "{{base}}/tasks/{{taskId}}", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] } }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users (authenticated)",
+          "request": { "method": "GET", "url": "{{base}}/users", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        },
+        {
+          "name": "Get All Users (global admin only)",
+          "request": { "method": "GET", "url": "{{base}}/users/admin", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }] }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        { "name": "Health Check", "request": { "method": "GET", "url": "{{base}}/health" } }
+      ]
+    }
+  ]
+}
