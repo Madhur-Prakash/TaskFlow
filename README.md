@@ -1,200 +1,209 @@
-# TaskFlow — Full-Stack Project Management App
+<div align="center">
 
-A production-ready Trello-like task management application with JWT auth, RBAC, and a Kanban board UI.
+# ✅ TaskFlow
+
+**A production-ready, full-stack project management app**
+
+Trello-like Kanban boards · JWT auth with auto-refresh · Role-based access control · Redis caching · Docker-ready
+
+<br/>
+
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+
+</div>
+
+---
+
+## What is TaskFlow?
+
+TaskFlow is a full-stack task management application where users can create organizations, invite members, and manage tasks on a Kanban board. It features a secure JWT authentication system using httpOnly cookies, role-based access control at both the global and organization level, and a Redis-backed caching layer.
 
 ---
 
 ## Tech Stack
 
-| Layer     | Technology                              |
-|-----------|-----------------------------------------|
-| Backend   | Node.js, Express, MongoDB, Mongoose     |
-| Auth      | JWT (access + refresh), bcrypt, cookies |
-| Frontend  | React 18, React Router v6, Axios        |
-| Security  | Helmet, rate-limit, mongo-sanitize      |
-| Logging   | Winston                                 |
-| DevOps    | Docker, docker-compose, Nginx           |
+| Layer | Technology |
+|-------|-----------|
+| Backend | Node.js, Express, MongoDB, Mongoose |
+| Auth | JWT (access + refresh tokens), bcrypt, httpOnly cookies |
+| Frontend | React 18, React Router v6, Axios |
+| Cache | Redis (ioredis), read-through with write invalidation |
+| Security | Helmet, rate-limit, mongo-sanitize, Joi validation |
+| Logging | Winston |
+| API Docs | Swagger UI (OpenAPI 3.0) |
+| DevOps | Docker, docker-compose |
 
 ---
 
-## Folder Structure
+## Quick Start
+
+### Docker (one command)
+
+```bash
+git clone <repo-url>
+cd Task-Flow
+
+# Add your secrets to backend/.env first (see Environment Variables)
+docker-compose up --build
+```
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:5000 |
+| Swagger Docs | http://localhost:5000/api/v1/docs |
+| Health Check | http://localhost:5000/api/v1/health |
+
+### Local Development
+
+```bash
+# Backend
+cd backend && npm install
+npm run dev          # → http://localhost:5000
+
+# Frontend (new terminal)
+cd frontend && npm install
+npm start            # → http://localhost:3000
+```
+
+**Prerequisites:** Node.js 18+, MongoDB on port 27017, Redis on port 6379 (optional)
+
+---
+
+## Environment Variables
+
+Create `backend/.env`:
+
+```env
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/taskflow
+REDIS_URL=redis://localhost:6379
+
+JWT_SECRET=your-strong-access-secret-32-chars-min
+JWT_REFRESH_SECRET=your-strong-refresh-secret-different
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+NODE_ENV=development
+CLIENT_URL=http://localhost:3000
+```
+
+---
+
+## Project Structure
 
 ```
-internship-task/
+Task-Flow/
 ├── backend/
 │   ├── src/
-│   │   ├── config/         # DB connection
-│   │   ├── controllers/    # Request handlers (thin layer)
-│   │   ├── services/       # Business logic
-│   │   ├── repositories/   # Data access layer
-│   │   ├── models/         # Mongoose schemas
-│   │   ├── middlewares/    # Auth, RBAC, error handler
-│   │   ├── routes/         # Express routers
+│   │   ├── config/         # DB, Redis, Swagger config
+│   │   ├── controllers/    # Thin HTTP handlers
+│   │   ├── services/       # Business logic + RBAC
+│   │   ├── repositories/   # Data access (Mongoose)
+│   │   ├── models/         # User, Organization, Task schemas
+│   │   ├── middlewares/    # protect, requireOrgMember, errorHandler
+│   │   ├── routes/         # authRoutes, orgRoutes, taskRoutes, userRoutes
 │   │   ├── validators/     # Joi schemas
-│   │   └── utils/          # Logger, AppError, JWT helpers
+│   │   └── utils/          # logger, AppError, asyncHandler, cache, jwt
 │   ├── .env
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── api/            # Axios client + service modules
-│   │   ├── context/        # AuthContext
+│   │   ├── context/        # AuthContext (global auth state)
 │   │   ├── components/     # Navbar, Modal, Alert, TaskBoard, ProtectedRoute
 │   │   ├── hooks/          # useApi
 │   │   └── pages/          # Login, Register, Dashboard, OrgPage, AdminPanel
 │   └── Dockerfile
-└── docker-compose.yml
+├── docs/                   # 📖 Full documentation
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
 
-## Quick Start (Local)
+## API Overview
 
-### Prerequisites
-- Node.js 18+
-- MongoDB running locally on port 27017
+Interactive docs: **`http://localhost:5000/api/v1/docs`**
 
-### Backend
+| Domain | Endpoints |
+|--------|-----------|
+| Auth | `POST /auth/register` · `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` |
+| Organizations | `GET /orgs` · `POST /orgs` · `GET /orgs/:id` · `DELETE /orgs/:id` · member management |
+| Tasks | `GET /orgs/:id/tasks` · `POST /orgs/:id/tasks` · `PATCH /tasks/:id` · `DELETE /tasks/:id` |
+| Users | `GET /users` · `GET /users/admin` |
 
-```bash
-cd backend
-npm install
-# Edit .env — set JWT_SECRET and MONGO_URI
-npm run dev
-# Server starts on http://localhost:5000
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm start
-# App starts on http://localhost:3000
-```
+See the full [API Reference →](./docs/api.md)
 
 ---
 
-## Quick Start (Docker)
+## RBAC
 
-```bash
-# From project root
-docker-compose up --build
-# Frontend: http://localhost:3000
-# Backend:  http://localhost:5000
-```
+Two role levels — global (on the user) and per-organization (on the membership).
 
----
+| Action | Global Admin | Org Admin | Member |
+|--------|:-----------:|:---------:|:------:|
+| Create organization | ✅ | ✅ | ✅ |
+| Delete organization | ✅ | ✅ | ❌ |
+| Add / remove members | ✅ | ✅ | ❌ |
+| View all tasks in org | ✅ | ✅ | ❌ |
+| View assigned tasks | ✅ | ✅ | ✅ |
+| Create task | ✅ | ✅ | ✅ |
+| Update / delete own task | ✅ | ✅ | ✅ |
+| Update / delete any task | ✅ | ✅ | ❌ |
+| View all users | ✅ | ❌ | ❌ |
 
-## Environment Variables (backend/.env)
-
-| Variable               | Description                        |
-|------------------------|------------------------------------|
-| PORT                   | Server port (default 5000)         |
-| MONGO_URI              | MongoDB connection string          |
-| JWT_SECRET             | Access token signing secret        |
-| JWT_REFRESH_SECRET     | Refresh token signing secret       |
-| JWT_EXPIRES_IN         | Access token TTL (e.g. 15m)        |
-| JWT_REFRESH_EXPIRES_IN | Refresh token TTL (e.g. 7d)        |
-| NODE_ENV               | development / production           |
-| CLIENT_URL             | Frontend origin for CORS           |
+See [Auth & Security →](./docs/auth.md)
 
 ---
 
-## API Reference
+## Auth Design
 
-### Auth
-| Method | Endpoint               | Auth | Description          |
-|--------|------------------------|------|----------------------|
-| POST   | /api/v1/auth/register  | No   | Register user        |
-| POST   | /api/v1/auth/login     | No   | Login, get tokens    |
-| POST   | /api/v1/auth/refresh   | No   | Refresh access token |
-| POST   | /api/v1/auth/logout    | Yes  | Logout               |
-| GET    | /api/v1/auth/me        | Yes  | Get current user     |
+- Tokens stored in **httpOnly cookies only** — never `localStorage`, immune to XSS
+- `accessToken` expires in 15 minutes, `refreshToken` in 7 days
+- Refresh tokens are **rotated on every use** — reuse of an old token is rejected
+- Axios interceptor handles **silent auto-refresh** — users never see a 401
+- On app load, `AuthContext` restores session via `/auth/me` with automatic refresh fallback
 
-### Organizations
-| Method | Endpoint                              | Role        | Description         |
-|--------|---------------------------------------|-------------|---------------------|
-| GET    | /api/v1/orgs                          | Any         | Get my orgs         |
-| POST   | /api/v1/orgs                          | Any         | Create org          |
-| GET    | /api/v1/orgs/:orgId                   | Member      | Get org details     |
-| DELETE | /api/v1/orgs/:orgId                   | Org Admin   | Delete org          |
-| POST   | /api/v1/orgs/:orgId/members           | Org Admin   | Add member          |
-| DELETE | /api/v1/orgs/:orgId/members/:userId   | Org Admin   | Remove member       |
-| PATCH  | /api/v1/orgs/:orgId/members/:userId/role | Org Admin | Update member role  |
-
-### Tasks
-| Method | Endpoint                        | Role        | Description         |
-|--------|---------------------------------|-------------|---------------------|
-| GET    | /api/v1/orgs/:orgId/tasks       | Member      | Get tasks (filtered by role) |
-| POST   | /api/v1/orgs/:orgId/tasks       | Member      | Create task         |
-| PATCH  | /api/v1/tasks/:taskId           | Creator/Assignee/Admin | Update task |
-| DELETE | /api/v1/tasks/:taskId           | Creator/Admin | Delete task       |
-
-### Users (Admin only)
-| Method | Endpoint        | Role  | Description   |
-|--------|-----------------|-------|---------------|
-| GET    | /api/v1/users   | Admin | List all users|
+See [Auth & Security →](./docs/auth.md)
 
 ---
 
-## Sample API Requests
+## Caching
 
-```bash
-# Register
-curl -X POST http://localhost:5000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Alice","email":"alice@example.com","password":"secret123"}'
+Redis read-through cache on the two most-hit endpoints:
 
-# Login
-curl -X POST http://localhost:5000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alice@example.com","password":"secret123"}'
+| Cached Data | Key | TTL |
+|-------------|-----|-----|
+| User's org list | `orgs:user:<userId>` | 30s |
+| Org details | `orgs:<orgId>` | 30s |
+| All tasks in org | `tasks:org:<orgId>` | 30s |
+| User's assigned tasks | `tasks:assignee:<userId>:org:<orgId>` | 30s |
 
-# Create Org (with token)
-curl -X POST http://localhost:5000/api/v1/orgs \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Acme Corp"}'
+Cache is **gracefully degraded** — if Redis is down, the app falls through to MongoDB with no errors.
 
-# Create Task
-curl -X POST http://localhost:5000/api/v1/orgs/<orgId>/tasks \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Build login page","status":"todo"}'
-```
+See [Caching →](./docs/caching.md)
 
 ---
 
-## RBAC Rules
+## Documentation
 
-| Action                  | Global Admin | Org Admin | Member |
-|-------------------------|:---:|:---:|:---:|
-| Create organization     | ✅  | ✅  | ✅  |
-| Delete organization     | ✅  | ✅  | ❌  |
-| Add/remove members      | ✅  | ✅  | ❌  |
-| View all tasks in org   | ✅  | ✅  | ❌  |
-| View assigned tasks     | ✅  | ✅  | ✅  |
-| Create task             | ✅  | ✅  | ✅  |
-| Update/delete own task  | ✅  | ✅  | ✅  |
-| Update/delete any task  | ✅  | ✅  | ❌  |
-| View all users          | ✅  | ❌  | ❌  |
+| Doc | Description |
+|-----|-------------|
+| [Architecture](./docs/architecture.md) | 3-layer design, request lifecycle, middleware stack |
+| [API Reference](./docs/api.md) | All endpoints, request/response shapes, cURL examples |
+| [Auth & Security](./docs/auth.md) | Token flow, RBAC matrix, security middleware |
+| [Data Models](./docs/models.md) | MongoDB schemas, indexes, Mongoose patterns |
+| [Frontend](./docs/frontend.md) | React structure, routing, components, AuthContext |
+| [Caching](./docs/caching.md) | Redis strategy, cache keys, invalidation |
+| [Deployment](./docs/deployment.md) | Docker, env vars, production checklist, scaling path |
 
 ---
 
-## Scalability Design
+## Author
 
-### Current Architecture
-- **3-layer backend**: Controller → Service → Repository. Controllers are thin; all business logic lives in services; data access is isolated in repositories — making it trivial to swap MongoDB for another DB.
-- **Stateless JWT auth**: Horizontally scalable — any instance can verify tokens without shared session state.
-- **Modular routes**: Each domain (auth, orgs, tasks) is a self-contained Express router, ready to be extracted into a microservice.
-
-### Path to Microservices
-1. Each `src/routes/*` module maps 1:1 to a potential microservice (AuthService, OrgService, TaskService).
-2. The repository layer abstracts the DB — swap to a dedicated DB per service with no service-layer changes.
-3. Add an API Gateway (e.g. AWS API Gateway or Kong) in front to route by path prefix.
-
-### Production Additions
-- **Redis**: Cache `GET /orgs` and `GET /orgs/:id/tasks` with a short TTL (30s). Invalidate on write.
-- **Message Queue** (SQS/RabbitMQ): Emit events (e.g. `member.added`) for async notifications.
-- **CDN**: Serve the React build via CloudFront.
-- **Monitoring**: Winston logs → CloudWatch / Datadog. Add `/metrics` endpoint for Prometheus.
+Built by **[Madhur-Prakash](https://github.com/Madhur-Prakash)**
