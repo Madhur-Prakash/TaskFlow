@@ -26,6 +26,15 @@ const assertOrgMember = async (orgId, userId) => {
   return org.owner.toString() === userId ? 'admin' : member?.role;
 };
 
+// Validate that a provided assignee is either the org owner or a listed member
+const validateAssignee = async (orgId, assigneeId) => {
+  if (!assigneeId) return;
+  const org = await orgRepo.findByIdRaw(orgId);
+  if (!org) throw new AppError('Organization not found', 404);
+  const isMember = org.owner.toString() === assigneeId || org.members.some((m) => m.user.toString() === assigneeId);
+  if (!isMember) throw new AppError('Assignee must be a member of this organization', 400);
+};
+
 const getOrgTasks = async (orgId, userId) => {
   // Any org member (admin or member) can see all tasks in the organization.
   // Keep caching per-organization for performance.
@@ -52,9 +61,14 @@ const createTask = async (orgId, data, userId) => {
     // Auto-assign to self if not specified
     data.assignedTo = userId;
   } else if (role === 'admin') {
-    // Admins must assign a task when creating it
+    // Admins may optionally assign a task. If they provide an assignee, ensure it's part of the org (owner or member).
     const assignee = data.assignedTo ? data.assignedTo.toString() : null;
-    if (!assignee) throw new AppError('Admin must assign task to a member', 400);
+    if (assignee) {
+      await validateAssignee(orgId, assignee);
+    } else {
+      // Default to the creating admin when no assignee is provided
+      data.assignedTo = userId;
+    }
   }
 
   const task = await taskRepo.create({ ...data, organization: orgId, createdBy: userId });
