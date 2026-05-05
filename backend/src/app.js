@@ -47,6 +47,7 @@ app.use(cookieParser());
 
 // Logging
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
+if (process.env.NODE_ENV === 'production') app.use(morgan('combined'));
 
 // Public utility routes (before any protect middleware)
 app.get('/api/v1/health', (req, res) => res.json(
