@@ -41,6 +41,8 @@ const OrgPage = () => {
 
   const handleAddMember = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
     try {
       const { data } = await orgAPI.addMember(orgId, memberForm);
       setOrg(data.data);
@@ -54,6 +56,8 @@ const OrgPage = () => {
 
   const handleRemoveMember = async (userId) => {
     if (!window.confirm('Remove this member?')) return;
+    setError('');
+    setSuccess('');
     try {
       const { data } = await orgAPI.removeMember(orgId, userId);
       setOrg(data.data);
@@ -64,6 +68,8 @@ const OrgPage = () => {
   };
 
   const handleRoleChange = async (memberId, newRole) => {
+    setError('');
+    setSuccess('');
     setUpdatingRoleFor(memberId);
     try {
       const { data } = await orgAPI.updateMemberRole(orgId, memberId, newRole);
@@ -78,6 +84,8 @@ const OrgPage = () => {
 
   const handleDeleteOrg = async () => {
     if (!window.confirm('Delete this organization? This cannot be undone.')) return;
+    setError('');
+    setSuccess('');
     try {
       await orgAPI.delete(orgId);
       navigate('/dashboard');

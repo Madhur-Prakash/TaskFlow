@@ -14,6 +14,10 @@ const Alert = ({ type = "error", title, message, onClose, duration = 3000 }) => 
   useEffect(() => {
     if (!message) return;
 
+    // Reset visible state when a new message arrives
+    setVisible(true);
+    setFading(false);
+
     // Start fade out 300ms before removal
     const fadeTimer = setTimeout(() => setFading(true), duration - 500);
     const hideTimer = setTimeout(() => {
