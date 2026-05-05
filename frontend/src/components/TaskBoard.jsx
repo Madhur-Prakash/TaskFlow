@@ -39,16 +39,13 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     e.preventDefault();
     const payload = { ...form };
     const isAdmin = orgRole === 'admin';
-    // Only include assignedTo if admin; empty string -> null for admins
     if (isAdmin) payload.assignedTo = form.assignedTo || null;
     else delete payload.assignedTo;
     try {
       if (editTask) {
-        const { data } = await taskAPI.update(editTask._id, payload);
-        setTasks((prev) => prev.map((t) => (t._id === editTask._id ? data.data : t)));
+        await taskAPI.update(editTask._id, payload);
       } else {
-        const { data } = await taskAPI.create(orgId, payload);
-        setTasks((prev) => [...prev, data.data]);
+        await taskAPI.create(orgId, payload);
       }
       setShowModal(false);
     } catch (err) {
@@ -60,7 +57,6 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     if (!window.confirm('Delete this task?')) return;
     try {
       await taskAPI.delete(taskId);
-      setTasks((prev) => prev.filter((t) => t._id !== taskId));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete task');
     }
@@ -95,28 +91,45 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain');
     setDragOverColumn(null);
+    setDraggingId(null);
     if (!id) return;
+    const task = tasks.find((t) => t._id === id);
+    if (!task || task.status === status) return; // no-op
+    // Optimistic update for instant visual feedback
+    setTasks((prev) => prev.map((t) => (t._id === id ? { ...t, status } : t)));
     try {
-      const { data } = await taskAPI.update(id, { status });
-      setTasks((prev) => prev.map((t) => (t._id === id ? data.data : t)));
+      await taskAPI.update(id, { status });
+      // socket event will arrive and confirm the final state
     } catch (err) {
+      // Revert on failure
+      setTasks((prev) => prev.map((t) => (t._id === id ? { ...t, status: task.status } : t)));
       setError(err.response?.data?.message || 'Failed to move task');
-    } finally {
-      setDraggingId(null);
     }
   };
 
   // Real-time updates via Socket.IO
   useEffect(() => {
-    if (!orgId) return; // nothing to join
-    const socket = io(process.env.REACT_APP_SOCKET_URL || undefined, { transports: ['websocket'], withCredentials: true });
-    socket.emit('joinOrg', { orgId });
+    if (!orgId) return;
+    // Connect to same origin — no explicit URL so it uses window.location.origin
+    // CRA dev server proxy (setupProxy.js) forwards /socket.io → localhost:5000
+    const socket = io({
+      path: '/socket.io',
+      withCredentials: true,
+      transports: ['polling', 'websocket'],
+    });
+
+    // Wait for connection before joining — emitting before connect is a no-op
+    socket.on('connect', () => {
+      socket.emit('joinOrg', { orgId });
+    });
+
+    // Re-join after reconnection
+    socket.on('reconnect', () => {
+      socket.emit('joinOrg', { orgId });
+    });
 
     socket.on('task:created', (task) => {
-      setTasks((prev) => {
-        if (prev.some((t) => t._id === task._id)) return prev;
-        return [...prev, task];
-      });
+      setTasks((prev) => [...prev, task]);
     });
 
     socket.on('task:updated', (task) => {

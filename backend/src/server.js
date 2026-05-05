@@ -20,16 +20,19 @@ const start = async () => {
   const server = http.createServer(app);
   const io = new Server(server, {
     cors: {
-      origin: [
-        'http://localhost:5000',
-        'http://127.0.0.1:5000',
-        'http://127.0.0.1:3000',
-        process.env.CLIENT_URL || '', // From .env
-        process.env.PROD_URL || '', // From .env
-      ].filter(Boolean),
+      origin: (origin, cb) => {
+        const allowed = [
+          'http://localhost:3000',
+          'http://localhost:5000',
+          process.env.CLIENT_URL,
+          process.env.PROD_URL,
+        ].filter(Boolean);
+        // Allow requests with no origin (same-origin, curl) or matching allowed list
+        if (!origin || allowed.includes(origin)) return cb(null, true);
+        cb(new Error(`Socket CORS blocked: ${origin}`));
+      },
       methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization'],
     },
   });
 

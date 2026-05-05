@@ -2,7 +2,10 @@ const Task = require('../models/Task');
 const mongoose = require('mongoose');
 
 const taskRepo = {
-  create: (data) => Task.create(data),
+  create: async (data) => {
+    const task = await Task.create(data);
+    return Task.findById(task._id).populate('assignedTo', 'name email').populate('createdBy', 'name email');
+  },
   findById: (id) => Task.findById(id).populate('assignedTo', 'name email').populate('createdBy', 'name email'),
   findByOrg: (orgId) => Task.find({ organization: orgId }).populate('assignedTo', 'name email').populate('createdBy', 'name email'),
   findByAssignee: (userId, orgId) => {

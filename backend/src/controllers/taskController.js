@@ -20,11 +20,9 @@ exports.updateTask = asyncHandler(async (req, res) => {
   const task = await taskService.updateTask(req.params.taskId, req.body, req.user._id.toString());
   const io = req.app.get('io');
   if (io && task) {
-    const orgId = task.organization?._id ? task.organization._id.toString() : task.organization?.toString?.();
-    if (orgId) {
-      console.log(`[Socket] Emitting task:updated to org_${orgId}`, task._id);
-      io.to(`org_${orgId}`).emit('task:updated', task);
-    }
+    // organization is populated as object by taskRepo.update
+    const orgId = (task.organization?._id ?? task.organization)?.toString();
+    if (orgId) io.to(`org_${orgId}`).emit('task:updated', task);
   }
   res.json({ success: true, data: task });
 });
