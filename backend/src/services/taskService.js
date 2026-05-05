@@ -119,4 +119,4 @@ const deleteTask = async (taskId, userId) => {
   return orgId;
 };
 
-module.exports = { getOrgTasks, createTask, updateTask, deleteTask };
+module.exports = { getOrgTasks, createTask, updateTask, deleteTask, invalidateOrgTasks };

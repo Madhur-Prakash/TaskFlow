@@ -10,9 +10,15 @@ const keys = {
 };
 
 // Invalidate all cache entries that could be affected by a change to an org
+const taskService = require('./taskService');
+
 const invalidateOrg = async (orgId, memberUserIds = []) => {
   const patterns = [keys.org(orgId), ...memberUserIds.map(keys.userOrgs)];
   await cache.del(...patterns);
+  // Also clear task-related caches (per-org and per-assignee) so role changes take effect immediately
+  if (taskService && typeof taskService.invalidateOrgTasks === 'function') {
+    await taskService.invalidateOrgTasks(orgId);
+  }
 };
 
 const createOrg = async (name, ownerId) => {

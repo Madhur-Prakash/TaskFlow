@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import useSocket from '../hooks/useSocket';
 import { User, Flag, Edit2, Trash2, Plus } from 'lucide-react';
 import { taskAPI } from '../api';
 import Alert from './Alert';
@@ -16,6 +16,7 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
   const [form, setForm] = useState({ title: '', description: '', status: 'todo', priority: 'medium', assignedTo: '' });
   const [sortOption, setSortOption] = useState('all'); // all | assignedToMe | byPriorityHigh | byPriorityLow
   const [selectedMember, setSelectedMember] = useState(''); // filter tasks by member
+  const socket = useSocket();
 
   const openCreate = () => {
     setEditTask(null);
@@ -107,26 +108,13 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     }
   };
 
-  // Real-time updates via Socket.IO
+  // Real-time updates via Socket.IO (shared singleton socket)
   useEffect(() => {
     if (!orgId) return;
-    // Connect to same origin — no explicit URL so it uses window.location.origin
-    // CRA dev server proxy (setupProxy.js) forwards /socket.io → localhost:5000
-    const socket = io({
-      path: '/socket.io',
-      withCredentials: true,
-      transports: ['polling', 'websocket'],
-    });
 
-    // Wait for connection before joining — emitting before connect is a no-op
-    socket.on('connect', () => {
-      socket.emit('joinOrg', { orgId });
-    });
-
-    // Re-join after reconnection
-    socket.on('reconnect', () => {
-      socket.emit('joinOrg', { orgId });
-    });
+    const join = () => socket.emit('joinOrg', { orgId });
+    socket.on('connect', join);
+    socket.on('reconnect', join);
 
     socket.on('task:created', (task) => {
       setTasks((prev) => [...prev, task]);
@@ -140,9 +128,17 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
     });
 
+    // join immediately if already connected
+    if (socket && socket.connected) join();
+
     return () => {
+      if (!socket) return;
+      socket.off('connect', join);
+      socket.off('reconnect', join);
+      socket.off('task:created');
+      socket.off('task:updated');
+      socket.off('task:deleted');
       socket.emit('leaveOrg', { orgId });
-      socket.disconnect();
     };
   }, [orgId, setTasks]);
 

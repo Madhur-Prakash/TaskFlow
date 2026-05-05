@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orgAPI, taskAPI, userAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import useSocket from '../../hooks/useSocket';
 import Alert from '../../components/Alert';
 import Modal from '../../components/Modal';
 import TaskBoard from '../../components/TaskBoard';
@@ -24,6 +25,8 @@ const OrgPage = () => {
   const isAdmin = org?.owner?._id === user?._id ||
     org?.members?.find((m) => m.user._id === user?._id)?.role === 'admin';
 
+  const socket = useSocket();
+
   useEffect(() => {
     Promise.all([
       orgAPI.getOne(orgId),
@@ -38,6 +41,40 @@ const OrgPage = () => {
       .catch(() => setError('Failed to load organization'))
       .finally(() => setLoading(false));
   }, [orgId, user]);
+
+  // Real-time org-level updates
+  useEffect(() => {
+    if (!orgId) return;
+    if (!socket) return;
+
+    const refresh = async () => {
+      try {
+        const [orgRes, taskRes] = await Promise.all([orgAPI.getOne(orgId), taskAPI.getByOrg(orgId)]);
+        setOrg(orgRes.data.data);
+        setTasks(taskRes.data.data);
+      } catch (err) {
+        // ignore refresh errors
+      }
+    };
+
+    const handlers = {
+      'org:memberAdded': refresh,
+      'org:memberRemoved': refresh,
+      'org:memberRoleUpdated': refresh,
+      'org:deleted': () => navigate('/dashboard'),
+    };
+
+    Object.entries(handlers).forEach(([evt, handler]) => socket.on(evt, handler));
+
+    // Join org room so server can target us if needed
+    if (socket.connected) socket.emit('joinOrg', { orgId });
+    socket.on('connect', () => socket.emit('joinOrg', { orgId }));
+
+    return () => {
+      Object.keys(handlers).forEach((evt) => socket.off(evt));
+      socket.emit('leaveOrg', { orgId });
+    };
+  }, [orgId, navigate, socket]);
 
   const handleAddMember = async (e) => {
     e.preventDefault();
