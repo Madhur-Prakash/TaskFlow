@@ -65,6 +65,15 @@ const updateTask = async (taskId, data, userId) => {
   const isAssignee = task.assignedTo?._id.toString() === userId;
   const isCreator = task.createdBy._id.toString() === userId;
 
+  // Only admins can change the assignee field
+  if (Object.prototype.hasOwnProperty.call(data, 'assignedTo')) {
+    const newAssignee = data.assignedTo ? data.assignedTo.toString() : null;
+    const currentAssignee = task.assignedTo?._id?.toString() || null;
+    if (newAssignee !== currentAssignee && role !== 'admin') {
+      throw new AppError('Only admins can change task assignee', 403);
+    }
+  }
+
   if (role !== 'admin' && !isAssignee && !isCreator) {
     throw new AppError('Not authorized to update this task', 403);
   }

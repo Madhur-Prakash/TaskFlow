@@ -30,7 +30,11 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...form, assignedTo: form.assignedTo || null };
+    const payload = { ...form };
+    const isAdmin = orgRole === 'admin';
+    // Only include assignedTo if admin; empty string -> null for admins
+    if (isAdmin) payload.assignedTo = form.assignedTo || null;
+    else delete payload.assignedTo;
     try {
       if (editTask) {
         const { data } = await taskAPI.update(editTask._id, payload);
@@ -75,7 +79,11 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
               <div key={task._id} className="task-card">
                 <div className="task-title">{task.title}</div>
                 {task.description && <div className="task-desc">{task.description}</div>}
-                {task.assignedTo && <div className="task-meta">👤 {task.assignedTo.name}</div>}
+                {task.assignedTo ? (
+                  <div className="task-meta">👤 {task.assignedTo.name}</div>
+                ) : (
+                  <div className="task-meta">— Unassigned</div>
+                )}
                 {canEdit(task) && (
                   <div className="task-actions">
                     <button className="btn btn-xs btn-outline" onClick={() => openEdit(task)}>Edit</button>
@@ -105,15 +113,17 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
                 {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label>Assign To</label>
-              <select value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}>
-                <option value="">Unassigned</option>
-                {members.map((m) => (
-                  <option key={m.user._id} value={m.user._id}>{m.user.name}</option>
-                ))}
-              </select>
-            </div>
+            {orgRole === 'admin' && (
+              <div className="form-group">
+                <label>Assign To</label>
+                <select value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}>
+                  <option value="">Unassigned</option>
+                  {members.map((m) => (
+                    <option key={m.user._id} value={m.user._id}>{m.user.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="modal-actions">
               <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
               <button type="submit" className="btn btn-primary">{editTask ? 'Update' : 'Create'}</button>
