@@ -64,7 +64,7 @@
   }
 
   .btn-xs {
-    @apply px-2 py-1 text-xs;
+    @apply px-2 py-1 text-sm;
   }
 
   /* ── Navbar ── */
@@ -219,11 +219,11 @@
   }
 
   .member-name {
-    @apply font-medium text-sm;
+    @apply font-medium text-base;
   }
 
   .member-email {
-    @apply text-xs text-slate-600;
+    @apply text-sm text-slate-600;
   }
 
   .member-actions {
@@ -275,7 +275,7 @@
 
   /* ── Badges ── */
   .badge {
-    @apply inline-block px-2 py-1 rounded-full text-xs font-semibold;
+    @apply inline-block px-2 py-1 rounded-full text-sm font-semibold;
   }
 
   .badge-admin {
