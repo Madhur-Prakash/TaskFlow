@@ -4,7 +4,7 @@ const connectDB = require('./config/db');
 const { getClient } = require('./config/redis');
 const logger = require('./utils/logger');
 
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 const start = async () => {
   await connectDB();
