@@ -18,6 +18,12 @@ Trello-like Kanban boards · JWT auth with auto-refresh · Role-based access con
 
 ---
 
+## Live Demo
+
+Check out TaskFlow: https://taskflow.share.zrok.io/
+
+---
+
 ## What is TaskFlow?
 
 TaskFlow is a full-stack task management application where users can create organizations, invite members, and manage tasks on a Kanban board. It features a secure JWT authentication system using httpOnly cookies, role-based access control at both the global and organization level, and a Redis-backed caching layer.
@@ -44,7 +50,7 @@ TaskFlow is a full-stack task management application where users can create orga
 ### Docker (one command)
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Madhur-Prakash/TaskFlow
 cd Task-Flow
 
 # Add your secrets to backend/.env first (see Environment Variables)
