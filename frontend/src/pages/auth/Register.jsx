@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Alert from '../../components/common/Alert';
+import Alert from '../../components/Alert';
 
 const Register = () => {
   const { register } = useAuth();

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { User, Flag, Edit2, Trash2, Plus } from 'lucide-react';
-import { DndContext, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { taskAPI } from '../../api';
-import Alert from '../common/Alert';
-import Modal from '../common/Modal';
+import { taskAPI } from '../api';
+import Alert from './Alert';
+import Modal from './Modal';
 
 const STATUSES = ['todo', 'in-progress', 'done'];
 
@@ -74,8 +72,9 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     task.assignedTo?._id === currentUserId;
 
   const onDragStart = (e, taskId) => {
-    // legacy noop kept for compatibility
+    e.dataTransfer.setData('text/plain', taskId);
     setDraggingId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const onDragEnd = () => {
@@ -92,35 +91,18 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     if (dragOverColumn === status) setDragOverColumn(null);
   };
 
-  const onDropToColumn = async (taskId, status) => {
-    if (!taskId) return;
-    const prev = [...tasks];
-    setTasks((prevTasks) => prevTasks.map((t) => (t._id === taskId ? { ...t, status } : t)));
+  const onDropToColumn = async (e, status) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    setDragOverColumn(null);
+    if (!id) return;
     try {
-      const { data } = await taskAPI.update(taskId, { status });
-      setTasks((prevTasks) => prevTasks.map((t) => (t._id === taskId ? data.data : t)));
+      const { data } = await taskAPI.update(id, { status });
+      setTasks((prev) => prev.map((t) => (t._id === id ? data.data : t)));
     } catch (err) {
-      setTasks(prev);
       setError(err.response?.data?.message || 'Failed to move task');
     } finally {
       setDraggingId(null);
-    }
-  };
-
-  // DnD Kit handlers
-  const sensors = useSensors(useSensor(PointerSensor));
-
-  const handleDragStart = ({ active }) => {
-    setDraggingId(active.id);
-  };
-
-  const handleDragEnd = ({ active, over }) => {
-    setDraggingId(null);
-    if (!over) return;
-    // drop onto column like column-todo
-    if (String(over.id).startsWith('column-')) {
-      const status = String(over.id).replace('column-', '');
-      onDropToColumn(active.id, status);
     }
   };
 
@@ -172,9 +154,8 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
         </div>
       </div>
       <Alert message={error} onClose={() => setError('')} />
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="kanban-board">
-          {(() => {
+      <div className="kanban-board">
+        {(() => {
           // Prepare tasks according to sort/filter options
           const normalizeId = (id) => (id ? id.toString() : id);
           const mine = (t) => t.assignedTo && normalizeId(t.assignedTo._id) === normalizeId(currentUserId);
@@ -196,57 +177,48 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
             arranged.sort((a, b) => priorityOrder[a.priority || 'medium'] - priorityOrder[b.priority || 'medium']);
           }
           
-            return STATUSES.map((status) => {
-              const Column = ({ status }) => {
-                const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
-                return (
-                  <div ref={setNodeRef} key={status} className={`kanban-column ${isOver ? 'drag-over' : ''}`}>
-                    <div className="kanban-column-header">{status.replace('-', ' ').toUpperCase()}</div>
-                    {arranged.filter((t) => t.status === status).map((task) => (
-                      <DraggableTask key={task._id} task={task} />
-                    ))}
-                  </div>
-                );
-              };
-
-              const DraggableTask = ({ task }) => {
-                const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task._id });
-                const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
-                return (
-                  <div
-                    ref={setNodeRef}
-                    {...listeners}
-                    {...attributes}
-                    style={style}
-                    className={`task-card priority-${task.priority || 'medium'} ${isDragging ? 'dragging' : ''}`}
-                  >
-                    <div className="task-title">{task.title}</div>
-                    {task.description && <div className="task-desc">{task.description}</div>}
-                    <div className="flex gap-2 mb-2 items-center">
-                      {task.assignedTo ? (
-                        <div className="task-meta"><User size={16} className="mr-1 inline" /> {task.assignedTo.name}</div>
-                      ) : (
-                        <div className="task-meta">Unassigned</div>
-                      )}
-                      <div className={`task-meta priority-${task.priority || 'medium'}`}>
-                        <Flag size={16} className="mr-1 inline" /> {task.priority || 'medium'}
-                      </div>
-                    </div>
-                    {canEdit(task) && (
-                      <div className="task-actions">
-                        <button className="btn btn-xs btn-outline" onClick={() => openEdit(task)} title="Edit"><Edit2 size={16} /></button>
-                        <button className="btn btn-xs btn-danger" onClick={() => handleDelete(task._id)} title="Delete"><Trash2 size={16} /></button>
-                      </div>
+          return STATUSES.map((status) => (
+            <div
+              key={status}
+              className={`kanban-column ${dragOverColumn === status ? 'drag-over' : ''}`}
+              onDragOver={(e) => onDragOverColumn(e, status)}
+              onDragLeave={() => onDragLeaveColumn(status)}
+              onDrop={(e) => onDropToColumn(e, status)}
+            >
+              <div className="kanban-column-header">{status.replace('-', ' ').toUpperCase()}</div>
+              {arranged.filter((t) => t.status === status).map((task) => (
+                <div
+                  key={task._id}
+                  className={`task-card priority-${task.priority || 'medium'} ${draggingId === task._id ? 'dragging' : ''}`}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, task._id)}
+                  onDragEnd={onDragEnd}
+                >
+                  <div className="task-title">{task.title}</div>
+                  {task.description && <div className="task-desc">{task.description}</div>}
+                  <div className="flex gap-2 mb-2 items-center">
+                    {task.assignedTo ? (
+                      <div className="task-meta"><User size={16} className="mr-1 inline" /> {task.assignedTo.name}</div>
+                    ) : (
+                      <div className="task-meta">Unassigned</div>
                     )}
+                    <div className={`task-meta priority-${task.priority || 'medium'}`}>
+                      <Flag size={16} className="mr-1 inline" /> {task.priority || 'medium'}
+                    </div>
                   </div>
-                );
-              };
-
-              return <Column key={status} status={status} />;
-            });
+                  {canEdit(task) && (
+                    <div className="task-actions">
+                      <button className="btn btn-xs btn-outline" onClick={() => openEdit(task)} title="Edit"><Edit2 size={16} /></button>
+                      <button className="btn btn-xs btn-danger" onClick={() => handleDelete(task._id)} title="Delete"><Trash2 size={16} /></button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ));
         })()}
-        </div>
-      </DndContext>
+      </div>
+
       {showModal && (
         <Modal title={editTask ? 'Edit Task' : 'New Task'} onClose={() => setShowModal(false)}>
           <form onSubmit={handleSubmit}>

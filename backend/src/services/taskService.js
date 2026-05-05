@@ -102,6 +102,7 @@ const deleteTask = async (taskId, userId) => {
 
   await taskRepo.delete(taskId);
   await invalidateOrgTasks(orgId);
+  return orgId;
 };
 
 module.exports = { getOrgTasks, createTask, updateTask, deleteTask };

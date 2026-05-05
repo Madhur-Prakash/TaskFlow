@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orgAPI, taskAPI, userAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
-import Alert from '../../components/common/Alert';
-import Modal from '../../components/common/Modal';
-import TaskBoard from '../../components/common/TaskBoard';
+import Alert from '../../components/Alert';
+import Modal from '../../components/Modal';
+import TaskBoard from '../../components/TaskBoard';
 
 const OrgPage = () => {
   const { orgId } = useParams();

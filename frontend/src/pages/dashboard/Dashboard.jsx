@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orgAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
-import Alert from '../../components/common/Alert';
-import Modal from '../../components/common/Modal';
+import Alert from '../../components/Alert';
+import Modal from '../../components/Modal';
 
 const Dashboard = () => {
   const { user } = useAuth();

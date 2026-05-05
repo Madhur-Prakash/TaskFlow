@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { userAPI } from '../../api';
-import Alert from '../../components/common/Alert';
+import Alert from '../../components/Alert';
 
 const AdminPanel = () => {
   const [users, setUsers] = useState([]);
