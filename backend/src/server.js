@@ -29,40 +29,21 @@ const start = async () => {
   // Make io accessible via app for controllers
   app.set('io', io);
 
-  const { verifyToken } = require('./utils/jwt');
-  const orgRepo = require('./repositories/orgRepo');
-
-  io.use(async (socket, next) => {
-    try {
-      const cookieHeader = socket.handshake.headers.cookie || '';
-      const parts = cookieHeader.split(';').map((c) => c.trim());
-      const accessCookie = parts.find((p) => p.startsWith('accessToken='));
-      if (!accessCookie) return next(new Error('Authentication error'));
-      const token = decodeURIComponent(accessCookie.split('=')[1]);
-      const decoded = verifyToken(token, process.env.JWT_SECRET);
-      socket.data.userId = decoded.id;
-      return next();
-    } catch (err) {
-      return next(new Error('Authentication error'));
-    }
-  });
-
   io.on('connection', (socket) => {
-    socket.on('joinOrg', async ({ orgId }) => {
-      try {
-        if (!orgId) return;
-        const org = await orgRepo.findByIdRaw(orgId);
-        if (!org) return;
-        const userId = socket.data.userId;
-        const isMember = org.owner.toString() === userId || org.members.some((m) => m.user.toString() === userId);
-        if (isMember) socket.join(`org_${orgId}`);
-      } catch (err) {
-        // ignore
-      }
+    console.log('[Socket.IO] Client connected:', socket.id);
+    
+    socket.on('joinOrg', ({ orgId }) => {
+      console.log(`[Socket.IO] joinOrg: ${socket.id} joining org_${orgId}`);
+      if (orgId) socket.join(`org_${orgId}`);
     });
 
     socket.on('leaveOrg', ({ orgId }) => {
+      console.log(`[Socket.IO] leaveOrg: ${socket.id} leaving org_${orgId}`);
       if (orgId) socket.leave(`org_${orgId}`);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('[Socket.IO] Client disconnected:', socket.id);
     });
   });
 

@@ -9,7 +9,10 @@ exports.getTasks = asyncHandler(async (req, res) => {
 exports.createTask = asyncHandler(async (req, res) => {
   const task = await taskService.createTask(req.params.orgId, req.body, req.user._id.toString());
   const io = req.app.get('io');
-  if (io) io.to(`org_${req.params.orgId}`).emit('task:created', task);
+  if (io) {
+    console.log(`[Socket] Emitting task:created to org_${req.params.orgId}`, task._id);
+    io.to(`org_${req.params.orgId}`).emit('task:created', task);
+  }
   res.status(201).json({ success: true, data: task });
 });
 

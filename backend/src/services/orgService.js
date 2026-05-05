@@ -82,6 +82,11 @@ const updateMemberRole = async (orgId, userId, role) => {
   const org = await orgRepo.findByIdRaw(orgId);
   if (!org) throw new AppError('Organization not found', 404);
 
+  // Prevent modifying the owner's role
+  if (org.owner.toString() === userId) {
+    throw new AppError('Cannot modify the owner\'s role', 403);
+  }
+
   const member = org.members.find((m) => m.user.toString() === userId);
   if (!member) throw new AppError('Member not found', 404);
 

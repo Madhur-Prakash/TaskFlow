@@ -127,10 +127,16 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
   // Real-time updates via Socket.IO
   useEffect(() => {
     if (!orgId) return; // nothing to join
-    const socket = io(process.env.REACT_APP_SOCKET_URL || undefined, { transports: ['websocket'], withCredentials: true });
-    socket.emit('joinOrg', { orgId });
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+    const socket = io(socketUrl, { transports: ['websocket'], withCredentials: true });
+    
+    socket.on('connect', () => {
+      console.log('✓ Socket connected:', socket.id);
+      socket.emit('joinOrg', { orgId });
+    });
 
     socket.on('task:created', (task) => {
+      console.log('📥 task:created', task);
       setTasks((prev) => {
         if (prev.some((t) => t._id === task._id)) return prev;
         return [...prev, task];
@@ -138,11 +144,17 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     });
 
     socket.on('task:updated', (task) => {
+      console.log('📥 task:updated', task);
       setTasks((prev) => prev.map((t) => (t._id === task._id ? task : t)));
     });
 
     socket.on('task:deleted', ({ taskId }) => {
+      console.log('📥 task:deleted', taskId);
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
+    });
+
+    socket.on('disconnect', () => {
+      console.log('✗ Socket disconnected');
     });
 
     return () => {
