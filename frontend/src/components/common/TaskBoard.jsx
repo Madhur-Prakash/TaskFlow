@@ -128,8 +128,19 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
   useEffect(() => {
     if (!orgId) return; // nothing to join
     
-    // Explicit socket URL - NEVER use proxy for websocket
-    const socketUrl = 'http://localhost:5000';
+    // Determine socket URL based on environment
+    let socketUrl;
+    if (process.env.REACT_APP_API_URL) {
+      // Production: use environment variable (e.g., https://api.taskflow.com)
+      socketUrl = process.env.REACT_APP_API_URL;
+    } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      // Development: use localhost:5000
+      socketUrl = 'http://localhost:5000';
+    } else {
+      // Production without env var: assume backend is same host, different port or path
+      socketUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+    }
+    
     console.log('[Socket] Attempting connection to:', socketUrl);
     
     const socket = io(socketUrl, { 
