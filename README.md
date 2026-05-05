@@ -20,7 +20,7 @@ Trello-like Kanban boards · JWT auth with auto-refresh · Role-based access con
 
 ## Live Demo
 
-Check out TaskFlow: https://taskflow.share.zrok.io/
+Check out TaskFlow: [https://taskflow.share.zrok.io/](https://taskflow.share.zrok.io/)
 
 ---
 
