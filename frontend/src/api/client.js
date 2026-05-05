@@ -5,22 +5,22 @@ const api = axios.create({
   withCredentials: true, // sends cookies (accessToken + refreshToken) automatically
 });
 
-// Auto-refresh on 401
-api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
-      original._retry = true;
-      try {
-        await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
-        return api(original);
-      } catch {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(err);
-  }
-);
+// Auto-refresh on 401 -> don't do this globally, handle in individual API calls where needed (e.g. authAPI.me) to avoid infinite loops on protected routes when not logged in
+// api.interceptors.response.use(
+//   (res) => res,
+//   async (err) => {
+//     const original = err.config;
+//     if (err.response?.status === 401 && !original._retry) {
+//       original._retry = true;
+//       try {
+//         await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
+//         return api(original);
+//       } catch {
+//         window.location.href = '/login';
+//       }
+//     }
+//     return Promise.reject(err);
+//   }
+// );
 
 export default api;
