@@ -34,6 +34,7 @@ const schemas = {
     title: Joi.string().min(1).max(200).required(),
     description: Joi.string().max(1000).allow('').optional(),
     status: Joi.string().valid('todo', 'in-progress', 'done').optional(),
+    priority: Joi.string().valid('low', 'medium', 'high').optional(),
     assignedTo: Joi.string().optional().allow(null, ''),
   }),
 
@@ -41,6 +42,7 @@ const schemas = {
     title: Joi.string().min(1).max(200).optional(),
     description: Joi.string().max(1000).allow('').optional(),
     status: Joi.string().valid('todo', 'in-progress', 'done').optional(),
+    priority: Joi.string().valid('low', 'medium', 'high').optional(),
     assignedTo: Joi.string().optional().allow(null, ''),
   }),
 };

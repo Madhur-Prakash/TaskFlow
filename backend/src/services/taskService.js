@@ -27,30 +27,36 @@ const assertOrgMember = async (orgId, userId) => {
 };
 
 const getOrgTasks = async (orgId, userId) => {
-  const role = await assertOrgMember(orgId, userId);
-
-  if (role === 'admin') {
-    const cacheKey = keys.orgTasks(orgId);
-    const cached = await cache.get(cacheKey);
-    if (cached) return cached;
-
-    const tasks = await taskRepo.findByOrg(orgId);
-    await cache.set(cacheKey, tasks);
-    return tasks;
-  }
-
-  // Members only see their assigned tasks
-  const cacheKey = keys.assigneeTasks(userId, orgId);
+  // Any org member (admin or member) can see all tasks in the organization.
+  // Keep caching per-organization for performance.
+  await assertOrgMember(orgId, userId);
+  const cacheKey = keys.orgTasks(orgId);
   const cached = await cache.get(cacheKey);
   if (cached) return cached;
 
-  const tasks = await taskRepo.findByAssignee(userId, orgId);
+  const tasks = await taskRepo.findByOrg(orgId);
   await cache.set(cacheKey, tasks);
   return tasks;
 };
 
 const createTask = async (orgId, data, userId) => {
-  await assertOrgMember(orgId, userId);
+  const role = await assertOrgMember(orgId, userId);
+
+  if (role === 'member') {
+    // Members can only assign tasks to themselves
+    const assignee = data.assignedTo ? data.assignedTo.toString() : null;
+    const userIdStr = userId.toString();
+    if (assignee && assignee !== userIdStr) {
+      throw new AppError('Members can only assign tasks to themselves', 403);
+    }
+    // Auto-assign to self if not specified
+    data.assignedTo = userId;
+  } else if (role === 'admin') {
+    // Admins must assign a task when creating it
+    const assignee = data.assignedTo ? data.assignedTo.toString() : null;
+    if (!assignee) throw new AppError('Admin must assign task to a member', 400);
+  }
+
   const task = await taskRepo.create({ ...data, organization: orgId, createdBy: userId });
   await invalidateOrgTasks(orgId);
   return task;
