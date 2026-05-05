@@ -4,7 +4,6 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 
@@ -37,9 +36,6 @@ app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(mongoSanitize());
-
-// Rate limiting
-app.use('/api/v1/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: 'Too many requests' }));
 
 // Parsing
 app.use(express.json({ limit: '10kb' }));
