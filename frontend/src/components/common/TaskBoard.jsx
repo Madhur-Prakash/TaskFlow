@@ -127,12 +127,31 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
   // Real-time updates via Socket.IO
   useEffect(() => {
     if (!orgId) return; // nothing to join
-    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
-    const socket = io(socketUrl, { transports: ['websocket'], withCredentials: true });
+    
+    // Explicit socket URL - NEVER use proxy for websocket
+    const socketUrl = 'http://localhost:5000';
+    console.log('[Socket] Attempting connection to:', socketUrl);
+    
+    const socket = io(socketUrl, { 
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+    });
     
     socket.on('connect', () => {
       console.log('✓ Socket connected:', socket.id);
       socket.emit('joinOrg', { orgId });
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('✗ Socket connection error:', error?.message || error);
+    });
+
+    socket.on('error', (error) => {
+      console.error('✗ Socket error event:', error?.message || error);
     });
 
     socket.on('task:created', (task) => {
@@ -153,8 +172,8 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
     });
 
-    socket.on('disconnect', () => {
-      console.log('✗ Socket disconnected');
+    socket.on('disconnect', (reason) => {
+      console.log('✗ Socket disconnected:', reason);
     });
 
     return () => {

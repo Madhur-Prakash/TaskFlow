@@ -15,6 +15,9 @@ const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
+// Trust proxy for accurate IP detection in rate limiting
+app.set('trust proxy', 1);
+
 // Swagger UI — relaxed CSP only for /docs so assets and inline scripts load
 app.use('/api/v1/docs', helmet({
   contentSecurityPolicy: {

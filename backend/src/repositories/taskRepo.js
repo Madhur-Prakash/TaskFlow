@@ -15,7 +15,7 @@ const taskRepo = {
     }
     return Task.find({ assignedTo: assignee, organization: orgId }).populate('assignedTo', 'name email').populate('createdBy', 'name email');
   },
-  update: (id, data) => Task.findByIdAndUpdate(id, data, { new: true, runValidators: true }).populate('assignedTo', 'name email'),
+  update: (id, data) => Task.findByIdAndUpdate(id, data, { new: true, runValidators: true }).populate('assignedTo', 'name email').populate('createdBy', 'name email').populate('organization'),
   delete: (id) => Task.findByIdAndDelete(id),
 };
 

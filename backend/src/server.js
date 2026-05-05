@@ -20,9 +20,10 @@ const start = async () => {
   const server = http.createServer(app);
   const io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || '*',
-      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+      origin: ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000'],
+      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization'],
     },
   });
 
@@ -42,8 +43,12 @@ const start = async () => {
       if (orgId) socket.leave(`org_${orgId}`);
     });
 
-    socket.on('disconnect', () => {
-      console.log('[Socket.IO] Client disconnected:', socket.id);
+    socket.on('disconnect', (reason) => {
+      console.log('[Socket.IO] Client disconnected:', socket.id, 'reason:', reason);
+    });
+
+    socket.on('error', (error) => {
+      console.error('[Socket.IO] Socket error:', socket.id, error);
     });
   });
 
