@@ -10,6 +10,8 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverColumn, setDragOverColumn] = useState(null);
   const [form, setForm] = useState({ title: '', description: '', status: 'todo', priority: 'medium', assignedTo: '' });
   const [sortOption, setSortOption] = useState('all'); // all | assignedToMe | byPriorityHigh | byPriorityLow
   const [selectedMember, setSelectedMember] = useState(''); // filter tasks by member
@@ -68,6 +70,41 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
     task.createdBy?._id === currentUserId ||
     task.assignedTo?._id === currentUserId;
 
+  const onDragStart = (e, taskId) => {
+    e.dataTransfer.setData('text/plain', taskId);
+    setDraggingId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDragEnd = () => {
+    setDraggingId(null);
+    setDragOverColumn(null);
+  };
+
+  const onDragOverColumn = (e, status) => {
+    e.preventDefault();
+    setDragOverColumn(status);
+  };
+
+  const onDragLeaveColumn = (status) => {
+    if (dragOverColumn === status) setDragOverColumn(null);
+  };
+
+  const onDropToColumn = async (e, status) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    setDragOverColumn(null);
+    if (!id) return;
+    try {
+      const { data } = await taskAPI.update(id, { status });
+      setTasks((prev) => prev.map((t) => (t._id === id ? data.data : t)));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to move task');
+    } finally {
+      setDraggingId(null);
+    }
+  };
+
   return (
     <div>
       <div className="section-header">
@@ -113,10 +150,22 @@ const TaskBoard = ({ tasks, setTasks, orgId, members, currentUserId, orgRole }) 
           }
           
           return STATUSES.map((status) => (
-            <div key={status} className="kanban-column">
+            <div
+              key={status}
+              className={`kanban-column ${dragOverColumn === status ? 'drag-over' : ''}`}
+              onDragOver={(e) => onDragOverColumn(e, status)}
+              onDragLeave={() => onDragLeaveColumn(status)}
+              onDrop={(e) => onDropToColumn(e, status)}
+            >
               <div className="kanban-column-header">{status.replace('-', ' ').toUpperCase()}</div>
               {arranged.filter((t) => t.status === status).map((task) => (
-                <div key={task._id} className="task-card">
+                <div
+                  key={task._id}
+                  className={`task-card priority-${task.priority || 'medium'} ${draggingId === task._id ? 'dragging' : ''}`}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, task._id)}
+                  onDragEnd={onDragEnd}
+                >
                   <div className="task-title">{task.title}</div>
                   {task.description && <div className="task-desc">{task.description}</div>}
                   <div className="flex gap-2 mb-2 items-center">

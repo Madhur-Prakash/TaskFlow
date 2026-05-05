@@ -257,6 +257,26 @@
     @apply bg-white border border-slate-200 rounded-lg p-3 mb-2 shadow-sm;
   }
 
+  .task-card.priority-high {
+    @apply border-l-4 border-red-500;
+  }
+
+  .task-card.priority-medium {
+    @apply border-l-4 border-yellow-400;
+  }
+
+  .task-card.priority-low {
+    @apply border-l-4 border-green-500;
+  }
+
+  .task-card.dragging {
+    @apply opacity-60;
+  }
+
+  .kanban-column.drag-over {
+    @apply bg-slate-200 ring-2 ring-primary ring-opacity-10;
+  }
+
   .task-title {
     @apply font-medium text-sm mb-1;
   }
