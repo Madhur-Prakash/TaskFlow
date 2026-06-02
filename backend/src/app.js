@@ -47,6 +47,9 @@ app.use(cors({
 // This prevents direct API access that bypasses the frontend entirely.
 if (process.env.INTERNAL_PROXY_SECRET) {
   app.use('/api', (req, res, next) => {
+    if (req.url.startsWith('/v1/docs')){
+      return next();
+} 
     if (req.headers['x-internal-proxy'] !== process.env.INTERNAL_PROXY_SECRET) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
@@ -96,7 +99,7 @@ app.use('/api/v1/docs', docsGuard, helmet({
 app.use('/api/v1/docs', docsGuard,
   basicAuth({
     users: { 
-      admin: process.env.DOCS_TOKEN
+      [process.env.BASIC_AUTH_USER]: process.env.BASIC_AUTH_PASSWORD
     },
     challenge: true,
     unauthorizedResponse: (req) => req.auth
