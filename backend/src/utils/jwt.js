@@ -11,16 +11,17 @@ const generateTokens = (userId, role) => ({
 });
 
 const setTokenCookies = (res, accessToken, refreshToken) => {
-  const isProd = process.env.NODE_ENV === 'production';
+  // Use secure cookies in production OR when explicitly enabled (e.g. dev served over HTTPS via zrok)
+  const secure = process.env.NODE_ENV === 'production' || process.env.SECURE_COOKIES === 'true';
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: isProd,
+    secure,
     sameSite: 'strict',
     maxAge: 15 * 60 * 1000,
   });
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: isProd,
+    secure,
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });

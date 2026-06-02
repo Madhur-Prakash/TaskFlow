@@ -15,11 +15,54 @@ const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
-// Trust proxy for accurate IP detection in rate limiting
+// Trust the immediate upstream proxy (zrok / nginx) only
 app.set('trust proxy', 1);
 
-// Swagger UI — relaxed CSP only for /docs so assets and inline scripts load
-app.use('/api/v1/docs', helmet({
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// Build whitelist from env; filter out blanks so missing vars don't allow empty-string origins
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.PROD_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow same-origin / server-to-server (no Origin header) and whitelisted origins
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+}));
+
+// ── INTERNAL PROXY SECRET ────────────────────────────────────────────────────
+// When INTERNAL_PROXY_SECRET is set, every /api request must carry the matching
+// X-Internal-Proxy header, which the CRA dev proxy injects automatically.
+// This prevents direct API access that bypasses the frontend entirely.
+if (process.env.INTERNAL_PROXY_SECRET) {
+  app.use('/api', (req, res, next) => {
+    if (req.headers['x-internal-proxy'] !== process.env.INTERNAL_PROXY_SECRET) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+    next();
+  });
+}
+
+// ── SWAGGER DOCS GUARD ───────────────────────────────────────────────────────
+// Docs are disabled entirely in production.
+// In development they require the DOCS_TOKEN query param or header.
+const docsGuard = (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ success: false, message: 'Not found' });
+  }
+  const token = req.query.token || req.headers['x-docs-token'];
+  if (!token || token !== process.env.DOCS_TOKEN) {
+    return res.status(401).json({ success: false, message: 'Docs access requires a valid token (?token=<DOCS_TOKEN>)' });
+  }
+  next();
+};
+
+// Relaxed CSP only for the docs path so Swagger UI assets load
+app.use('/api/v1/docs', docsGuard, helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -35,20 +78,19 @@ app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'TaskFlow API Docs',
 }));
 
-// Security (global)
+// ── GLOBAL SECURITY ──────────────────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(mongoSanitize());
 
-// Parsing
+// ── PARSING ──────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
-// Logging
+// ── LOGGING ──────────────────────────────────────────────────────────────────
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
 if (process.env.NODE_ENV === 'production') app.use(morgan('combined'));
 
-// Public utility routes (before any protect middleware)
+// ── PUBLIC UTILITY ROUTES ────────────────────────────────────────────────────
 app.get('/api/v1/health', (req, res) => res.json(
   {
     "API Version": '1.0.0',
@@ -58,25 +100,27 @@ app.get('/api/v1/health', (req, res) => res.json(
     "Authors": "Madhur-Prakash"
   }
 ));
-app.get('/api/v1/docs.json', (req, res) => res.json(swaggerSpec));
-app.get('/', (req, res) => res.json({ 
-  'API version': '1.0.0',
-  'message': 'Welcome to TaskFlow API',
-  'docs:': '/api/v1/docs',
-  'health:': '/api/v1/health',
-  'Authors': 'Madhur-Prakash'
-}));
+app.get('/api/v1/docs.json', docsGuard, (req, res) => res.json(swaggerSpec));
+app.get('/', (req, res) => res.json(
+  {
+  "API Version": "1.0.0",
+  "status": "ok",
+  "timestamp": "2026-06-02T17:35:37.801Z",
+  "docs": "/api/v1/docs",
+  "Authors": "Madhur-Prakash"
+}
+));
 
-// Routes
+// ── APPLICATION ROUTES ───────────────────────────────────────────────────────
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/orgs', orgRoutes);
 app.use('/api/v1', taskRoutes);
 app.use('/api/v1/users', userRoutes);
 
-// 404
+// ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 
-// Error handler
+// ── ERROR HANDLER ────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
 module.exports = app;

@@ -5,13 +5,13 @@ const { setTokenCookies } = require('../utils/jwt');
 exports.register = asyncHandler(async (req, res) => {
   const { user, tokens } = await authService.register(req.body);
   setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
-  res.status(201).json({ success: true, data: { user, accessToken: tokens.accessToken } });
+  res.status(201).json({ success: true, data: { user } });
 });
 
 exports.login = asyncHandler(async (req, res) => {
   const { user, tokens } = await authService.login(req.body);
   setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
-  res.json({ success: true, data: { user, accessToken: tokens.accessToken } });
+  res.json({ success: true, data: { user } });
 });
 
 exports.refresh = asyncHandler(async (req, res) => {
