@@ -47,9 +47,6 @@ app.use(cors({
 // This prevents direct API access that bypasses the frontend entirely.
 if (process.env.INTERNAL_PROXY_SECRET) {
   app.use('/api', (req, res, next) => {
-    if (req.path.startsWith('/v1/docs')) {
-      return next();
-    }
     if (req.headers['x-internal-proxy'] !== process.env.INTERNAL_PROXY_SECRET) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }

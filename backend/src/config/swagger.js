@@ -11,7 +11,8 @@ const options = {
     servers: [{ url: '/api/v1', description: 'Local dev' }],
     components: {
       securitySchemes: {
-        bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        InternalProxy: { type: 'apiKey', in: 'header', name: 'x-internal-proxy', description: 'Enter INTERNAL_PROXY_SECRET'}
+
       },
       schemas: {
         User: {
@@ -84,6 +85,7 @@ const options = {
         post: {
           tags: ['Auth'],
           summary: 'Register a new user',
+          security: [{ InternalProxy: [] }],
           requestBody: {
             required: true,
             content: {
@@ -111,6 +113,7 @@ const options = {
         post: {
           tags: ['Auth'],
           summary: 'Login and receive tokens',
+          security: [{ InternalProxy: [] }],
           requestBody: {
             required: true,
             content: {
@@ -136,6 +139,7 @@ const options = {
         post: {
           tags: ['Auth'],
           summary: 'Refresh access token using refresh token cookie',
+          security: [{ InternalProxy: [] }],
           responses: {
             200: { description: 'New access token issued' },
             401: { description: 'Invalid or missing refresh token' },
@@ -146,7 +150,7 @@ const options = {
         post: {
           tags: ['Auth'],
           summary: 'Logout and clear tokens',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           responses: {
             200: { description: 'Logged out successfully' },
             401: { description: 'Not authenticated' },
@@ -157,7 +161,7 @@ const options = {
         get: {
           tags: ['Auth'],
           summary: 'Get current authenticated user',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           responses: {
             200: { description: 'Current user data', content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } } },
             401: { description: 'Not authenticated' },
@@ -170,7 +174,7 @@ const options = {
         get: {
           tags: ['Organizations'],
           summary: 'Get all organizations for the current user',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           responses: {
             200: { description: 'List of organizations' },
             401: { description: 'Not authenticated' },
@@ -179,7 +183,7 @@ const options = {
         post: {
           tags: ['Organizations'],
           summary: 'Create a new organization',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           requestBody: {
             required: true,
             content: {
@@ -202,7 +206,7 @@ const options = {
         get: {
           tags: ['Organizations'],
           summary: 'Get organization details (members only)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [{ name: 'orgId', in: 'path', required: true, schema: { type: 'string' } }],
           responses: {
             200: { description: 'Organization details' },
@@ -213,7 +217,7 @@ const options = {
         delete: {
           tags: ['Organizations'],
           summary: 'Delete organization (org admin only)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [{ name: 'orgId', in: 'path', required: true, schema: { type: 'string' } }],
           responses: {
             200: { description: 'Organization deleted' },
@@ -226,7 +230,7 @@ const options = {
         post: {
           tags: ['Organizations'],
           summary: 'Add a member to the organization (org admin only)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [{ name: 'orgId', in: 'path', required: true, schema: { type: 'string' } }],
           requestBody: {
             required: true,
@@ -255,7 +259,7 @@ const options = {
         delete: {
           tags: ['Organizations'],
           summary: 'Remove a member from the organization (org admin only)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [
             { name: 'orgId', in: 'path', required: true, schema: { type: 'string' } },
             { name: 'userId', in: 'path', required: true, schema: { type: 'string' } },
@@ -271,7 +275,7 @@ const options = {
         patch: {
           tags: ['Organizations'],
           summary: "Update a member's role (org admin only)",
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [
             { name: 'orgId', in: 'path', required: true, schema: { type: 'string' } },
             { name: 'userId', in: 'path', required: true, schema: { type: 'string' } },
@@ -301,7 +305,7 @@ const options = {
         get: {
           tags: ['Tasks'],
           summary: 'Get tasks for an org (admins see all, members see assigned)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [{ name: 'orgId', in: 'path', required: true, schema: { type: 'string' } }],
           responses: {
             200: { description: 'List of tasks' },
@@ -311,7 +315,7 @@ const options = {
         post: {
           tags: ['Tasks'],
           summary: 'Create a task in an org',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [{ name: 'orgId', in: 'path', required: true, schema: { type: 'string' } }],
           requestBody: {
             required: true,
@@ -341,7 +345,7 @@ const options = {
         patch: {
           tags: ['Tasks'],
           summary: 'Update a task (creator, assignee, or org admin)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [{ name: 'taskId', in: 'path', required: true, schema: { type: 'string' } }],
           requestBody: {
             content: {
@@ -367,7 +371,7 @@ const options = {
         delete: {
           tags: ['Tasks'],
           summary: 'Delete a task (creator or org admin)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           parameters: [{ name: 'taskId', in: 'path', required: true, schema: { type: 'string' } }],
           responses: {
             200: { description: 'Task deleted' },
@@ -382,7 +386,7 @@ const options = {
         get: {
           tags: ['Users'],
           summary: 'Get all users (any authenticated user — used for add-member UI)',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           responses: {
             200: { description: 'List of users' },
             401: { description: 'Not authenticated' },
@@ -393,7 +397,7 @@ const options = {
         get: {
           tags: ['Users'],
           summary: 'Get all users — global admin only',
-          security: [{ bearerAuth: [] }],
+          security: [{ InternalProxy: [] }],
           responses: {
             200: { description: 'List of users' },
             403: { description: 'Global admin role required' },
