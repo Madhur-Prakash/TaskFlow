@@ -18,11 +18,18 @@ const app = express();
 // Trust the immediate upstream proxy (zrok / nginx) only
 app.set('trust proxy', 1);
 
+// ── PARSING ──────────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '10kb' }));
+app.use(cookieParser());
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // Build whitelist from env; filter out blanks so missing vars don't allow empty-string origins
+
+const clientOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : [];
+const prodOrigins = process.env.PROD_URL ? process.env.PROD_URL.split(',') : [];
 const allowedOrigins = [
-  process.env.CLIENT_URL,
-  process.env.PROD_URL,
+  ...clientOrigins,
+  ...prodOrigins
 ].filter(Boolean);
 
 app.use(cors({
@@ -57,6 +64,22 @@ const docsGuard = (req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     return res.status(404).json({ success: false, message: 'Not Allowed' });
   }
+  // check if token exist in cookies
+  if (req.cookies.docs_token === process.env.DOCS_TOKEN) {
+    return next();
+  }
+  const token = req.query.token
+  if (token !== process.env.DOCS_TOKEN){
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+  // set cookie for subsequent requests
+  res.cookie('docs_token', token, {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 10 * 60 * 1000, // 10 minutes
+  })
+
   next();
 };
 
@@ -90,10 +113,6 @@ app.use('/api/v1/docs', docsGuard,
 // ── GLOBAL SECURITY ──────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(mongoSanitize());
-
-// ── PARSING ──────────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10kb' }));
-app.use(cookieParser());
 
 // ── LOGGING ──────────────────────────────────────────────────────────────────
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
